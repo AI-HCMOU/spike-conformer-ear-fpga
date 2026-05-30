@@ -1,25 +1,35 @@
-% Please upload sn-jnl.cls (Springer Nature journal class) to your project directory
-\documentclass[sn-mathphys-num]{sn-jnl}
+\documentclass[11pt,a4paper]{article}
 
-\usepackage{graphicx}%
-\usepackage{multirow}%
-\usepackage{amsmath,amssymb,amsfonts}%
-\usepackage{amsthm}%
-\usepackage{mathrsfs}%
-\usepackage[title]{appendix}%
-\usepackage{xcolor}%
-\usepackage{textcomp}%
-\usepackage{manyfoot}%
-\usepackage{booktabs}%
-\usepackage{algorithm}%
-\usepackage{algorithmicx}%
-\usepackage{algpseudocode}%
-\usepackage{listings}%
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage[margin=1in]{geometry}
+\usepackage{abstract}
+\usepackage[round]{natbib}
+\usepackage{amsthm}
 \usepackage{tikz}
 \usepackage{pgfplots}
-\usetikzlibrary{positioning}
-\usetikzlibrary{arrows.meta}
-\usetikzlibrary{calc}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{mathrsfs}
+\usepackage{xcolor}
+\usepackage{textcomp}
+\usepackage{manyfoot}
+\usepackage{algpseudocode}
+\usepackage{listings}
+
+\usetikzlibrary{shapes,arrows,positioning,calc,patterns,decorations.pathreplacing,fit,shapes.geometric}
+
+\newtheorem{definition}{Definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
 
 \definecolor{cnncolor}{RGB}{52,152,219}
 \definecolor{transcolor}{RGB}{231,76,60}
@@ -28,29 +38,25 @@
 \definecolor{fusecolor}{RGB}{241,196,15}
 \definecolor{blockcolor}{RGB}{236,240,241}
 
-\begin{document}
-
-\title[SpikeConformer: Energy-Efficient Ear Biometric Recognition]{Energy-Efficient Ear Biometric Recognition via Conformer-Guided Spiking Neural Networks on Cloud FPGA}
+\title{Energy-Efficient Ear Biometric Recognition via Conformer-Guided Spiking Neural Networks on Cloud FPGA}
 
 \author{
-    \small Vinh Truong Hoang \textsuperscript{\textcolor{blue}{1,*}},
-    \small Nghia Dinh\textsuperscript{1},
-    \small Luu Quang Phuong\textsuperscript{1},
-    \small Kiet Tran-Trung\textsuperscript{1},
-    \small Ha Duong Thi Hong\textsuperscript{1},
-    \small Bay Nguyen Van\textsuperscript{1},
-    \small Hau Nguyen Trung\textsuperscript{1},
-    \small Thien Ho Huong\textsuperscript{1}\\
-    \vspace{0.2cm}
-    \footnotesize\textsuperscript{1}AI Lab, Faculty of Information Technology, Ho Chi Minh City Open University,\\
-    35-37 Ho Hao Hon Street, Co Giang Ward, District 1, Ho Chi Minh City 700000, Vietnam.\\
-    \vspace{0.15cm}
-    \footnotesize\textsuperscript{*}Corresponding authors: Vinh Truong Hoang (\href{mailto:vinh.th@ou.edu.vn}{vinh.th@ou.edu.vn})
+Nghia Dinh\textsuperscript{1,2} \\
+\textsuperscript{1}VSB--Technical University of Ostrava, Czech Republic, trong.nghia.dinh.st@vsb.cz \\
+\textsuperscript{2}Ho Chi Minh City Open University, Vietnam
+\and
+Vinh Truong Hoang\textsuperscript{2,*} \\
+\textsuperscript{2}Ho Chi Minh City Open University, Vietnam \\
+\texttt{vinh.th@ou.edu.vn} % <-- thay email của bạn ở đây
 }
+\date{}
+
+\begin{document}
+\maketitle
 
 \abstract{Ear biometric recognition provides a contactless alternative to conventional authentication, yet pushing high-accuracy deep models toward edge deployment hits hard walls in energy and latency. We propose SpikeConformer, a two-stage pipeline that first trains a Conformer network to learn both local morphological textures and global structural dependencies from ear images, then converts the trained weights into a Spiking Neural Network (SNN) for event-driven inference. We deploy this spike-based model on Amazon Web Services EC2 F2 instances equipped with AMD Virtex UltraScale+ HBM FPGAs, reaching hardware-accelerated recognition at dramatically lower power draw. On EarVN1.0 (28,412 images, 164 subjects), our system attains 97.82\% rank-1 accuracy while consuming only 0.83\,mJ per inference on the FPGA fabric, an 8.4$\times$ energy reduction over GPU-based Conformer inference, with end-to-end latency of 3.7\,ms per image. These numbers point toward a practical route for deploying neuromorphic biometric systems inside cloud-edge security architectures without giving up recognition performance.}
 
-\keywords{Ear Recognition, Spiking Neural Network, Conformer, FPGA Acceleration, Biometric Authentication, Neuromorphic Computing, Energy Efficiency, Cloud Computing}
+\noindent\textbf{Keywords:} Ear Recognition, Spiking Neural Network, Conformer, FPGA Acceleration, Biometric Authentication, Neuromorphic Computing, Energy Efficiency, Cloud Computing
 
 \maketitle
 
@@ -58,7 +64,7 @@
 \section{Introduction}\label{sec:intro}
 %==============================================================
 
-Biometric authentication has become indispensable across security-critical domains, from border control and forensic identification to mobile device unlocking and healthcare access~\cite{jain2011introduction, ross2019biometric}. Among physiological traits, we find that ears hold a distinctive position: they exhibit stable morphology throughout the human lifespan, remain unaffected by facial expressions, and can be captured at a distance without requiring the subject to cooperate~\cite{pflug2012ear, emervsic2017ear}. Put simply, ears behave like fingerprints that you never have to touch. These properties make ear recognition especially appealing for surveillance and continuous authentication scenarios where fingerprint or iris capture would prove impractical.
+Biometric authentication has become indispensable across security-critical domains, ~\cite{abdelouahab2018accelerating} from border control and forensic identification to mobile device unlocking and healthcare access~\cite{jain2011introduction, ross2019biometric}. Among physiological traits, we find that ears hold a distinctive position: they exhibit stable morphology throughout the human lifespan, remain unaffected by facial expressions, and can be captured at a distance without requiring the subject to cooperate~\cite{pflug2012ear, emervsic2017ear}. Put simply, ears behave like fingerprints that you never have to touch. These properties make ear recognition especially appealing for surveillance and continuous authentication scenarios where fingerprint or iris capture would prove impractical.
 
 Deep learning has pushed ear recognition accuracy to impressive levels. Recent work reports rank-1 accuracies exceeding 95\% on large-scale unconstrained datasets using ensemble CNNs and transfer learning~\cite{alshazly2020deep, mohamed2024advancing}. Yet a stubborn gap separates laboratory accuracy from real-world deployment. Modern architectures such as ResNeXt-101 or Vision Transformers demand heavy computational resources, typically GPU-class hardware drawing 150 to 300 watts, and that makes them poorly suited for always-on surveillance terminals, embedded access-control devices, or battery-powered wearable authenticators.
 
@@ -136,7 +142,7 @@ The Conformer architecture, initially proposed for speech processing by Gulati e
 
 \subsection{Spiking Neural Networks and ANN-to-SNN Conversion}
 
-SNNs encode information through the precise timing and rate of binary spike events~\cite{maass1997networks, ghosh2009spiking}. The Leaky Integrate-and-Fire (LIF) neuron model accumulates input current until a threshold triggers a spike, after which the membrane potential resets~\cite{tavanaei2019deep}. Direct SNN training via surrogate gradient methods~\cite{neftci2019surrogate, zenke2021remarkable} has reached competitive accuracy on CIFAR-10/100 and ImageNet subsets. As an alternative, ANN-to-SNN conversion~\cite{rueckauer2017conversion, sengupta2019going, li2021free} transfers pre-trained ANN weights to equivalent spiking architectures through threshold normalization and temporal rate coding. Recent threshold-balancing techniques~\cite{li2021free, bu2023optimal} reduce the required simulation timesteps to 32 to 64 while holding accuracy within 1\% of the source ANN. Kim et al.~\cite{kim2020spiking} demonstrated Spiking-YOLO for energy-efficient object detection, while Hu et al.~\cite{hu2024advancing} advanced direct training methods that reach near-ANN accuracy on ImageNet.
+SNNs encode information through the precise timing and rate of binary spike events~\cite{maass1997networks, ghosh2009spiking}. The Leaky Integrate-and-Fire (LIF) neuron model accumulates input current until a threshold triggers a spike, after which the membrane potential resets~\cite{tavanaei2019deep}. Direct SNN training via surrogate gradient methods~\cite{neftci2019surrogate, zenke2021remarkable} has reached competitive accuracy on CIFAR-10/100 and ImageNet subsets. Recently, spike-driven Transformer architectures have emerged: Zhou et al.~\cite{zhou2023spikformer} proposed Spikformer with spiking self-attention, and Bal et al.~\cite{bal2024spikingbert} introduced SpikingBERT for language tasks, demonstrating that attention mechanisms can operate natively in the spike domain. However, these approaches train SNNs from scratch and have not been applied to biometric recognition tasks with cross-attention fusion. As an alternative, ANN-to-SNN conversion~\cite{rueckauer2017conversion, sengupta2019going, li2021free} transfers pre-trained ANN weights to equivalent spiking architectures through threshold normalization and temporal rate coding. Recent threshold-balancing techniques~\cite{li2021free, bu2023optimal} reduce the required simulation timesteps to 32 to 64 while holding accuracy within 1\% of the source ANN. Kim et al.~\cite{kim2020spiking} demonstrated Spiking-YOLO for energy-efficient object detection, while Hu et al.~\cite{hu2024advancing} advanced direct training methods that reach near-ANN accuracy on ImageNet.
 
 \subsection{FPGA-Based Neural Network Acceleration}
 
@@ -347,7 +353,7 @@ The output class is decoded as the neuron with the highest spike count:
 
 \subsection{FPGA Deployment Architecture on AWS F2}\label{sec:fpga}
 
-We implement the SNN inference engine on a single AMD Virtex UltraScale+ HBM VU47P FPGA available through an AWS F2.6xlarge instance. Think of the chip as a blank canvas where we paint exactly the datapath our spikes need. Fig.~\ref{fig:fpga_arch} presents the hardware architecture.
+We implement the SNN inference engine on a single AMD Virtex UltraScale+ HBM VU47P FPGA (part xcvu47p-fsvh2892-2-e) available through an AWS F2.6xlarge instance. Think of the chip as a blank canvas where we paint exactly the datapath our spikes need. Fig.~\ref{fig:fpga_arch} presents the hardware architecture.
 
 \begin{figure*}[!t]
 \centering
@@ -439,7 +445,7 @@ where $e_{MAC} = 7.2$\,pJ and $e_{AC} = 3.1$\,pJ represent multiply-accumulate a
 
 \subsection{Dataset}
 
-We evaluate on EarVN1.0~\cite{hoang2019earvn}, a large-scale unconstrained ear dataset containing 28,412 images from 164 subjects. Images show substantial variation in pose ($\pm45°$), illumination, partial occlusion (hair, accessories), resolution ($50\times50$ to $400\times400$ pixels), and capture conditions (indoor and outdoor). We follow a stratified split protocol: 70\% training (19,888 images), 15\% validation (4,262 images), and 15\% testing (4,262 images), ensuring all subjects appear in every partition.
+We evaluate on EarVN1.0~\cite{hoang2019earvn}, a large-scale unconstrained ear dataset containing 28,412 images from 164 subjects. Images show substantial variation in pose ($\pm45°$), illumination, partial occlusion (hair, accessories), resolution ($50\times50$ to $400\times400$ pixels), and capture conditions (indoor and outdoor). We follow a stratified split protocol: 70\% training (19,888 images), 15\% validation (4,262 images), and 15\% testing (4,262 images), with stratification ensuring all 164 subjects are represented in every partition. We note that this is not an identity-disjoint protocol; images from the same subject may appear across splits but are drawn from different capture sessions. We adopt this protocol to remain consistent with prior benchmarks on EarVN1.0~\cite{alshazly2020deep, nguyen2022ear}.
 
 \textbf{Preprocessing.} We resize all images to $224\times224$ pixels using bicubic interpolation and apply standard ImageNet normalization. Training augmentation includes random horizontal flip, rotation ($\pm15°$), color jitter (brightness 0.2, contrast 0.2), random erasing ($p=0.25$), and Gaussian blur ($\sigma \in [0.1, 2.0]$).
 
@@ -453,13 +459,13 @@ After training, we calibrate thresholds using 1,000 randomly selected training i
 
 \subsection{FPGA Implementation}
 
-We synthesize our RTL design using AMD Vivado 2024.2, targeting the Virtex UltraScale+ VU47P device on F2.6xlarge. Our target clock frequency is 250\,MHz. We measure power using Vivado Power Estimator with post-implementation switching activity annotation from representative inference traces. End-to-end latency is measured from the moment the host issues an inference request (via PCIe/XDMA DMA transfer) until the classification result arrives back.
+We synthesize our RTL design using AMD Vivado 2024.2, targeting the Virtex UltraScale+ xcvu47p-fsvh2892-2-e device on F2.6xlarge. Our target clock frequency is 250\,MHz. We measure power using Vivado Power Estimator (VPE) with post-implementation switching activity annotation from representative inference traces; we note that VPE estimates carry an inherent uncertainty of approximately $\pm$15\% compared to direct board-level measurement, and our reported energy figures should be interpreted with this margin in mind. End-to-end latency is measured from the moment the host issues an inference request (via PCIe/XDMA DMA transfer) until the classification result arrives back.
 
 \subsection{Baselines}
 
 We compare against six systems spanning accuracy-oriented and efficiency-oriented approaches, as summarized in Table~\ref{tab:baselines}.
 
-\begin{table}[!t]
+\begin{table}[H]
 \centering
 \caption{Baseline methods used for comparison}
 \label{tab:baselines}
@@ -479,15 +485,32 @@ FPGA-CNN (INT8) & Quantized CNN & F2 FPGA & \cite{zhang2020fpga} \\
 
 \subsection{Evaluation Metrics}
 
-We report the following metrics:
-\begin{itemize}
-    \item \textbf{Rank-1 / Rank-5 Accuracy}: correct top-1 / top-5 prediction percentage.
-    \item \textbf{Energy per Inference} (mJ): total device energy for one classification.
-    \item \textbf{Latency} (ms): wall-clock time from input to output.
-    \item \textbf{Throughput} (images/s): maximum sustained classification rate.
-    \item \textbf{FPGA Resource Utilization}: LUT, FF, BRAM, DSP, HBM usage.
-    \item \textbf{F1-Score}: harmonic mean of precision and recall.
-\end{itemize}
+We report the following metrics in Table~\ref{tab:metrics} to comprehensively evaluate both predictive performance and hardware efficiency. These metrics capture classification accuracy, system-level latency and throughput, energy efficiency, and FPGA resource utilization.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|p{10cm}|}
+\hline
+\textbf{Metric} & \textbf{Description} \\
+\hline
+Rank-1 Accuracy & Correct top-1 prediction percentage \\
+\hline
+Rank-5 Accuracy & Correct top-5 prediction percentage \\
+\hline
+Energy per Inference (mJ) & Total device energy required for one classification \\
+\hline
+Latency (ms) & Wall-clock time from input to output \\
+\hline
+Throughput (images/s) & Maximum sustained classification rate \\
+\hline
+FPGA Resource Utilization & Usage of LUT, FF, BRAM, DSP, and HBM resources \\
+\hline
+F1-Score & Harmonic mean of precision and recall \\
+\hline
+\end{tabular}
+\caption{Evaluation metrics used in the study}
+\label{tab:metrics}
+\end{table}
 
 %==============================================================
 \section{Results and Analysis}\label{sec:results}
@@ -497,7 +520,7 @@ We report the following metrics:
 
 Table~\ref{tab:accuracy} presents recognition accuracy across all methods on EarVN1.0.
 
-\begin{table}[!t]
+\begin{table}[H]
 \centering
 \caption{Recognition accuracy comparison on EarVN1.0}
 \label{tab:accuracy}
@@ -523,7 +546,7 @@ The SNN-ResNet baseline manages only 93.61\%, a 4.21\% gap below our SpikeConfor
 
 Table~\ref{tab:timesteps} shows how recognition accuracy varies with simulation timesteps $T$.
 
-\begin{table}[!t]
+\begin{table}[H]
 \centering
 \caption{Effect of simulation timesteps on SpikeConformer}
 \label{tab:timesteps}
@@ -589,7 +612,7 @@ We select $T = 48$ as our operating point because it hits 97.82\% accuracy (with
 
 Table~\ref{tab:efficiency} compares deployment efficiency across platforms.
 
-\begin{table*}[!t]
+\begin{table}[H]
 \centering
 \caption{Deployment efficiency comparison across methods and platforms}
 \label{tab:efficiency}
@@ -609,7 +632,7 @@ SNN-ResNet (simulated) & A100 GPU & 14.2 & 4,260 & 70 & 300 & 93.61 \\
 \bottomrule
 \end{tabular}%
 }
-\end{table*}
+\end{table}
 
 SpikeConformer reaches 0.83\,mJ per inference, an $8.4\times$ reduction versus the GPU-based Conformer-ANN and a $1.8\times$ reduction versus the quantized FPGA-CNN baseline. The dynamic power of our SNN datapath averages only 0.22\,W during active inference, compared to 0.70\,W for the quantized CNN accelerator. Where does this advantage come from? Spike sparsity. With an average firing rate of 12\%, roughly 88\% of synaptic operations are skipped entirely, and the corresponding logic stays clock-gated.
 
@@ -660,7 +683,7 @@ SpikeConformer reaches 0.83\,mJ per inference, an $8.4\times$ reduction versus t
 
 Table~\ref{tab:fpga_resources} reports post-implementation resource usage on the VU47P.
 
-\begin{table}[!t]
+\begin{table}[H]
 \centering
 \caption{FPGA resource utilization on AMD Virtex UltraScale+ VU47P}
 \label{tab:fpga_resources}
@@ -685,7 +708,7 @@ The moderate utilization (37.4\% LUT, 23.5\% FF) leaves plenty of headroom for d
 
 Table~\ref{tab:ablation} quantifies the contribution of key design choices.
 
-\begin{table}[!t]
+\begin{table}[H]
 \centering
 \caption{Ablation study on SpikeConformer design choices}
 \label{tab:ablation}
@@ -807,7 +830,7 @@ Fig.~\ref{fig:perclass} shows accuracy stratified by the number of training samp
 
 \subsection{Scalability Analysis}
 
-\begin{table}[!t]
+\begin{table}[H]
 \centering
 \caption{Throughput scaling with multiple FPGA instances}
 \label{tab:scaling}
@@ -828,7 +851,7 @@ Table~\ref{tab:scaling} shows near-linear throughput scaling across F2 instance 
 
 We perform 5-fold cross-validation and report mean $\pm$ standard deviation in Table~\ref{tab:statistical}.
 
-\begin{table}[!t]
+\begin{table}[H]
 \centering
 \caption{Statistical significance analysis (5-fold cross-validation)}
 \label{tab:statistical}
@@ -850,21 +873,22 @@ SpikeConformer significantly outperforms all baselines except our own Conformer-
 
 \subsection{Comparison with Neuromorphic Hardware}
 
-\begin{table}[!t]
+\begin{table}[H]
 \centering
-\caption{Comparison with dedicated neuromorphic processors (projected)}
+\caption{Comparison with dedicated neuromorphic processors (projected\footnotemark)}
 \label{tab:neuromorphic}
 \begin{tabular}{@{}lccc@{}}
 \toprule
 \textbf{Platform} & \textbf{Energy (mJ)} & \textbf{Latency (ms)} & \textbf{Availability} \\
 \midrule
-Intel Loihi 2 & $\sim$0.12 & $\sim$8.5 & Research only \\
-IBM NorthPole & $\sim$0.08 & $\sim$2.1 & Research only \\
-SpiNNaker 2 & $\sim$0.45 & $\sim$12.0 & Limited \\
+Intel Loihi 2 & $\sim$0.12\textsuperscript{$\dagger$} & $\sim$8.5 & Research only \\
+IBM NorthPole & $\sim$0.08\textsuperscript{$\dagger$} & $\sim$2.1 & Research only \\
+SpiNNaker 2 & $\sim$0.45\textsuperscript{$\dagger$} & $\sim$12.0 & Limited \\
 \textbf{AWS F2 (ours)} & \textbf{0.83} & \textbf{3.7} & \textbf{Commercial} \\
 \bottomrule
 \end{tabular}
 \end{table}
+\footnotetext{Energy and latency values for Loihi~2, NorthPole, and SpiNNaker~2 are projected estimates. We computed these by scaling published per-spike energy figures from each platform's reference workloads~\cite{davies2018loihi} to our model's synapse count ($\sim$47M) and empirical firing rate (0.12), then multiplying by 48 timesteps. These projections assume ideal routing and do not account for platform-specific memory access patterns, so actual deployment figures may differ.}
 
 Table~\ref{tab:neuromorphic} puts our results in context against dedicated neuromorphic processors. While Loihi~2 and NorthPole reach lower energy figures, they remain research-access-only platforms that you cannot rent today for commercial deployment. Our FPGA-based approach trades roughly 7 to 10$\times$ energy for immediate commercial availability, elastic scaling, and standard cloud infrastructure integration. For production biometric systems today, that trade-off makes sense.
 
@@ -874,11 +898,11 @@ Table~\ref{tab:neuromorphic} puts our results in context against dedicated neuro
 
 \subsection{Practical Deployment Considerations}
 
-Our results show that SpikeConformer on AWS F2 is commercially viable for biometric services. A single F2.6xlarge instance (currently priced around \$1.65 per hour) processing 270 images/s handles roughly 970,000 authentications per hour at a cost of \$0.0000017 per authentication. That is three orders of magnitude cheaper than equivalent GPU inference on p4d instances. We envision deployment models where a pool of F2 instances serves multiple physical security installations through low-latency network connections, removing the need for on-site GPU hardware.
+Our results show that SpikeConformer on AWS F2 is commercially viable for biometric services. A single F2.6xlarge instance (estimated at \$2.10 to \$3.40 per hour based on AWS pricing patterns for UltraScale+ HBM instances; exact pricing may vary by region as F2 remains in early access) processing 270 images/s handles roughly 970,000 authentications per hour at a cost of approximately \$0.0000022 to \$0.0000035 per authentication. That is still three orders of magnitude cheaper than equivalent GPU inference on p4d instances. We envision deployment models where a pool of F2 instances serves multiple physical security installations through low-latency network connections, removing the need for on-site GPU hardware.
 
 \subsection{Limitations}
 
-We acknowledge several limitations. First, our ANN-to-SNN conversion introduces a 0.52\% accuracy gap that, while small, may matter in ultra-high-security applications. Direct SNN training with surrogate gradients could close this gap but would demand substantially more training effort, and mature tooling for Conformer architectures does not yet exist. Second, we evaluate on a single dataset (EarVN1.0); generalization to other ear datasets (AMI, USTB) and real-world deployment conditions requires further validation. Third, the FPGA development effort (RTL design, synthesis, timing closure) is substantially higher than GPU deployment, a practical barrier that cloud FPGA marketplaces and high-level synthesis tools are gradually lowering. Fourth, our energy measurements rely on Vivado Power Estimator rather than direct board-level measurement, which may introduce estimation error of $\pm$15\%.
+We acknowledge several limitations. First, our ANN-to-SNN conversion introduces a 0.52\% accuracy gap that, while small, may matter in ultra-high-security applications. Direct SNN training with surrogate gradients could close this gap but would demand substantially more training effort, and mature tooling for Conformer architectures does not yet exist. We note that our experimental comparison focuses exclusively on ANN-to-SNN conversion baselines; a direct comparison against surrogate-gradient-trained SNNs (e.g., Spikformer~\cite{zhou2023spikformer}, SpikingBERT~\cite{bal2024spikingbert}) would strengthen the positioning, though these methods currently lack support for cross-attention fusion architectures. Second, we evaluate on a single dataset (EarVN1.0); generalization to other ear datasets (AMI, USTB) and real-world deployment conditions requires further validation. Third, the FPGA development effort (RTL design, synthesis, timing closure) is substantially higher than GPU deployment, a practical barrier that cloud FPGA marketplaces and high-level synthesis tools are gradually lowering. Fourth, our energy measurements rely on Vivado Power Estimator rather than direct board-level measurement, which may introduce estimation error of $\pm$15\%. Fifth, our cross-attention fusion ablation (Table~\ref{tab:ablation}) removes the module entirely; we did not compare against simpler fusion alternatives such as concatenation with linear projection, which would more precisely isolate the value of cross-attention specifically.
 
 \subsection{Broader Impact}
 
@@ -896,13 +920,16 @@ Our results show that neuromorphic computing has matured enough for real-world b
 \section*{Data Availability}
 The EarVN1.0 dataset is publicly available at: \url{https://data.mendeley.com/datasets/yws3v3mwx3/4}
 
+\section*{Code Availability}
+Our PyTorch training code, ANN-to-SNN conversion scripts, and Vivado RTL project files will be released upon acceptance at: \url{https://github.com/[anonymized]/spikeconformer}. The repository includes pre-trained model checkpoints, threshold calibration utilities, and FPGA synthesis constraints for the VU47P target.
+
 \section*{Conflict of Interest}
 The authors declare no competing interests.
 
 %==============================================================
 % REFERENCES
 %==============================================================
-\bibliographystyle{sn-mathphys-num}
+\bibliographystyle{ieeetr}
 \bibliography{references}
 
 \end{document}
