@@ -1,0 +1,81 @@
+# SpikeConformer Configuration
+# Paper: Energy-Efficient Ear Biometric Recognition via Conformer-Guided SNNs on Cloud FPGA
+
+model:
+  name: SpikeConformer
+  embed_dim: 384
+  input_shape: [3, 224, 224]
+  num_classes: 164
+  # CNN branch
+  cnn_channels: [96, 192, 384]
+  cnn_kernel_size: 3
+  # Transformer branch
+  transformer_layers: 6
+  transformer_stages: 3
+  num_heads: 6
+  ffn_expansion: 4
+  # Fusion
+  num_fusion_points: 3
+  # Head
+  dropout: 0.3
+
+training:
+  optimizer: adamw
+  learning_rate: 0.0003
+  weight_decay: 0.05
+  batch_size: 64
+  epochs: 120
+  scheduler: cosine
+  warmup_epochs: 5
+  label_smoothing: 0.1
+  mixed_precision: true
+  gradient_clip: 1.0
+  patience: 20
+  loss: arcface
+  loss_params:
+    scale: 30.0
+    margin: 0.5
+
+data:
+  dataset: earvn1.0
+  root: data/earvn1.0
+  url: "https://data.mendeley.com/datasets/yws3v3mwx3/4"
+  train_split: 0.70
+  val_split: 0.15
+  test_split: 0.15
+  num_workers: 4
+  pin_memory: true
+  image_size: 224
+  # Augmentation
+  augmentation:
+    horizontal_flip: true
+    rotation_degrees: 15
+    color_jitter:
+      brightness: 0.2
+      contrast: 0.2
+    random_erasing_prob: 0.25
+    gaussian_blur_sigma: [0.1, 2.0]
+
+evaluation:
+  metrics: [rank1, rank5, f1, precision, recall, mcc, auc]
+  cross_validation: 5
+
+conversion:
+  method: threshold_balancing
+  timesteps: 48
+  leak_factor: 0.95
+  calibration_samples: 1000
+  attention_alpha: 0.7
+  percentile: 99.9
+  coding: rate  # rate or temporal
+
+fpga:
+  target_device: xcvu47p  # VU47P on AWS F2
+  clock_mhz: 250
+  precision_bits: 16
+  fractional_bits: 8
+  num_muu: 384
+  num_encoders: 196
+
+seed: 42
+deterministic: true
