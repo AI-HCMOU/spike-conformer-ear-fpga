@@ -240,6 +240,130 @@ cd hardware && vivado -mode batch -source build.tcl
 
 ---
 
+## FPGA Deployment Guide
+
+### End-to-End Flow
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  OFFLINE (your machine / GPU server)                                  │
+│                                                                      │
+│  1. Train Conformer (PyTorch)                                        │
+│         → best.pth (float32 weights)                                 │
+│                                                                      │
+│  2. Convert ANN→SNN (Python)                                         │
+│         → weights_fixed.bin (Q8.8 fixed-point weights)               │
+│         → thresholds.json (per-layer thresholds)                     │
+│                                                                      │
+│  3. Synthesize RTL (Vivado)                                          │
+│         → spike_core.xclbin (FPGA bitstream)                         │
+└──────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼ Upload to AWS
+┌──────────────────────────────────────────────────────────────────────┐
+│  ONLINE (AWS F2 instance)                                            │
+│                                                                      │
+│  4. Host Program (CPU) ←→ FPGA Kernel (spike_core)                   │
+│                                                                      │
+│     ┌─────────────┐         PCIe / DMA          ┌──────────────┐    │
+│     │  Host CPU   │ ───── weights_fixed.bin ───▶ │  HBM (FPGA)  │    │
+│     │             │ ───── input image ─────────▶ │              │    │
+│     │             │ ◀──── 384-dim embedding ──── │  spike_core  │    │
+│     └─────────────┘                              └──────────────┘    │
+│                                                                      │
+│  5. Cosine similarity matching → identity result                     │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### Step-by-Step
+
+| Step | Tool | Input | Output |
+|------|------|-------|--------|
+| Train | PyTorch | Images | `best.pth` |
+| Convert | Python | `best.pth` | `weights_fixed.bin` + `thresholds.json` |
+| Synthesize | Vivado | `spike_core.v` | `.xclbin` bitstream |
+| Deploy | Host program | Image + `.xclbin` | 384-dim embedding |
+| Match | NumPy/CPU | Embedding + gallery | Identity |
+
+### Weight Export (Float32 → Q8.8 Fixed-Point)
+
+```python
+# Convert trained weights for FPGA consumption
+def float_to_q8_8(tensor):
+    """Float32 → 16-bit fixed-point (8 integer, 8 fractional bits)"""
+    return (tensor * 256).round().clamp(-32768, 32767).short()
+
+# Export layer-by-layer as flat binary
+with open('weights_fixed.bin', 'wb') as f:
+    for name in layer_order:
+        f.write(float_to_q8_8(model.state_dict()[name]).numpy().tobytes())
+```
+
+### FPGA Emulation (Before Real Hardware)
+
+```bash
+# 1. Behavioral simulation (logic correctness)
+cd hardware
+iverilog -o sim rtl/spike_core.v testbench/tb_spike_core.v
+vvp sim
+
+# 2. Hardware emulation (cycle-accurate, timing)
+v++ --platform xilinx_aws-vu47p_shell-v1 \
+    --target hw_emu \
+    --kernel spike_core \
+    -o spike_core_emu.xclbin
+
+export XCL_EMULATION_MODE=hw_emu
+./host_app spike_core_emu.xclbin
+
+# 3. Real hardware build
+v++ --platform xilinx_aws-vu47p_shell-v1 \
+    --target hw \
+    --kernel spike_core \
+    -o spike_core.xclbin
+```
+
+| Mode | Speed | What it tests | Cost |
+|------|-------|---------------|------|
+| `sw_emu` | Seconds | Functional correctness | Free (local) |
+| `hw_emu` | Minutes–hours | Cycle-accurate timing | Free (local) |
+| `hw` | Real-time | Actual FPGA | ~$1.65/hr (F2) |
+
+### AWS F2 Deployment
+
+```bash
+# Create Amazon FPGA Image (AFI)
+aws ec2 create-fpga-image \
+    --input-storage-location Bucket=my-bucket,Key=spike_core.xclbin \
+    --name "SpikeConformer-v1"
+
+# Load on F2 instance
+sudo fpga-load-local-image -S 0 -I agfi-xxxxx
+
+# Run inference
+python host_inference.py --image probe.jpg --gallery gallery/
+```
+
+### What Happens Inside the FPGA (Per Inference)
+
+```
+For each timestep t = 1..48:
+    input_spike[t] = Poisson(image_pixel)    # 0 or 1
+
+    For each neuron i:
+        if input_spike = 1:
+            membrane[i] += weight[i]          # add only (no multiply!)
+        if membrane[i] ≥ threshold:
+            output_spike = 1                  # fire
+            membrane[i] -= threshold          # reset
+
+After T=48 steps:
+    embedding[i] = spike_count[i] / 48       # firing rate = feature value
+    → cosine_match(embedding, gallery) → identity
+```
+
+---
+
 ## Project Structure
 
 ```
