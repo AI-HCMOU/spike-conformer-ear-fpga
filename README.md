@@ -2,6 +2,8 @@
 
 > **Energy-Efficient Ear Biometric Recognition via Conformer-Guided Spiking Neural Networks on Cloud FPGA**
 
+📄 **[Read the full paper (PDF)](docs/conformer-snn-ear-fpga.pdf)**
+
 ---
 
 ## Overview
